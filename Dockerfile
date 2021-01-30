@@ -45,12 +45,12 @@ ENV MAILARCHIVA_TAR_FOLDER /tmp/ma_dist
 
 # copy source binaries and installation files
 ADD run-mailarchiva.sh /etc/service/mailarchiva/run
-ADD mailarchiva_server_linux_v8.0.17.tar.gz $MAILARCHIVA_INSTALL_TMP
+# ADD mailarchiva_server_linux_v8.0.17.tar.gz $MAILARCHIVA_INSTALL_TMP
 ADD expect-install $MAILARCHIVA_INSTALL_TMP/expect-install
 
 # Get the Mailarchiva package, extract and install
-# RUN wget -q -O - $MAILARCHIVA_BASE_URL | tar xzf - -C $MAILARCHIVA_INSTALL_TMP &&  \
-RUN mv $MAILARCHIVA_INSTALL_TMP/mailarchiva* $MAILARCHIVA_TAR_FOLDER && \
+RUN wget -q -O - $MAILARCHIVA_BASE_URL | tar xzf - -C $MAILARCHIVA_INSTALL_TMP &&  \
+    mv $MAILARCHIVA_INSTALL_TMP/mailarchiva* $MAILARCHIVA_TAR_FOLDER && \
     mv $MAILARCHIVA_INSTALL_TMP/expect-install $MAILARCHIVA_TAR_FOLDER && \
     cd $MAILARCHIVA_TAR_FOLDER && \
     expect expect-install && \
