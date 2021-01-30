@@ -1,0 +1,47 @@
+#/bin/bash
+# MailArchiva Enterprise Edition Configuration Script
+# Copyright (c) 2005-2009 Jamie Band
+# Visit http://www.mailarchiva.com for more information on this product
+# Author Valentin Popov
+
+minimum=2048
+default=$minimum
+echo "server requires a minimum of 2048m of heap space."
+echo "in production environments, more heap space may be needed. (e.g. [3072m - 5192m])"
+echo "we do not recommend allocating more than 5192m of heap without consulting with us first."
+echo "refer to http://help.mailarchiva.com/enterprise-memory-settings for specific recommendations."
+
+MAILARCHIVA_HOME=$(dirname $0)/..
+RamForOS=256
+MACHINE_TYPE=`uname -m`
+totalRam=$((`cat /proc/meminfo |grep -i memtotal|grep -v grep | awk '{print $2}'`/1024))
+MAServerRam=$(($totalRam-$RamForOS))
+
+uname -a | grep -q "x86_64"
+RES=$?
+if [ "$RES" = "0" ]; then
+        default="$MAServerRam"m
+        echo -n Max heap size ["$minimum"m-"$MAServerRam"m]?:
+        read HeapSize
+else 
+        if [ 2000 -le $totalRam ]; then
+         default=2048m
+         echo -n Max heap size ["$minimum"m-2048m]?:
+         read HeapSize
+        else
+         default="$MAServerRam"m
+         echo -n Max heap size ["$minimum"m-"$MAServerRam"m]?:
+         read HeapSize
+        fi
+fi
+if [ -z "$HeapSize" ]
+then
+HeapSize=$default
+fi
+if [ `echo "$HeapSize" | grep "[^m]$"` ]; then HeapSize="$HeapSize"m; fi
+sed "s/%heapsize%/$HeapSize/g" $MAILARCHIVA_HOME/server/sstemplate > $MAILARCHIVA_HOME/server/startserver
+chmod +x $MAILARCHIVA_HOME/server/startserver
+if [ `echo "$HeapSize" | grep "[^m]$"` ]; then HeapSize="$HeapSize"m; fi
+sed "s/%heapsize%/$HeapSize/g" $MAILARCHIVA_HOME/server/profiler/profiletemplate > $MAILARCHIVA_HOME/server/profiler/profile.sh
+chmod +x $MAILARCHIVA_HOME/server/profiler/profile.sh
+echo server will use $HeapSize RAM
