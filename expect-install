@@ -61,6 +61,6 @@ sleep 2
 
 #Set heap size
 expect -exact "m]?:"
-send --  "$::env(MAILARCHIVA_HEAP_SIZE)\r"
+send --  "\r"
 
 expect eof

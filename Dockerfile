@@ -1,9 +1,7 @@
 ####################################
 # Ubuntu Baseimage MailArchiva Docker Image
-# @todo: run this with: docker run -dt --env-file ./env.list --name ma -p 22:22 -p 8090:8090 -p 8091:8091 davi807/ma-phusion-sa-v7:7.12.42
-# @todo: run this with: docker run -dt --env-file ./env.list --name ma -p 22:22 -p 8090:8090 -p 8091:8091 davi807/ma-phusion-sa-v8:8.0.17
-# @todo: build this with: docker build -t davi807/ma-phusion-sa-v7:7.12.42 .
-# @todo: build this with: docker build -t davi807/ma-phusion-sa-v8:8.0.17 .
+# @todo: run this with: docker run -dt --name ma -p 22:22 -p 8090:8090 -p 8091:8091 davi807/ma-phusion-sa-v8:8.0.17
+# @todo: build this with: docker build -m 4g -t davi807/ma-phusion-sa-v8:8.0.17 .
 ####################################
 
 FROM phusion/baseimage:latest-amd64
@@ -47,24 +45,26 @@ ENV MAILARCHIVA_TAR_FOLDER /tmp/ma_dist
 
 # copy source binaries and installation files
 ADD run-mailarchiva.sh /etc/service/mailarchiva/run
-# ADD mailarchiva_server_linux_v8.0.17.tar.gz $MAILARCHIVA_INSTALL_TMP
+ADD mailarchiva_server_linux_v8.0.17.tar.gz $MAILARCHIVA_INSTALL_TMP
 ADD expect-install $MAILARCHIVA_INSTALL_TMP/expect-install
 
 # Get the Mailarchiva package, extract and install
-RUN wget -q -O - $MAILARCHIVA_BASE_URL | tar xzf - -C $MAILARCHIVA_INSTALL_TMP &&  \
-    mv $MAILARCHIVA_INSTALL_TMP/mailarchiva* $MAILARCHIVA_TAR_FOLDER && \
+# RUN wget -q -O - $MAILARCHIVA_BASE_URL | tar xzf - -C $MAILARCHIVA_INSTALL_TMP &&  \
+RUN mv $MAILARCHIVA_INSTALL_TMP/mailarchiva* $MAILARCHIVA_TAR_FOLDER && \
     mv $MAILARCHIVA_INSTALL_TMP/expect-install $MAILARCHIVA_TAR_FOLDER && \
     cd $MAILARCHIVA_TAR_FOLDER && \
     expect expect-install && \
     apt-get remove -yf expect wget && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*  && \
-    mkdir -m 777 /tmp/wal && \
-    cp ${MAILARCHIVA_INSTALL_DIR}/server/startserver ${MAILARCHIVA_INSTALL_DIR}/server/startserver.old && \
-    cp ${MAILARCHIVA_INSTALL_DIR}/server/profiler/profile.sh ${MAILARCHIVA_INSTALL_DIR}/server/profiler/profile.sh.old
-    
-# remove OPT settings as they will be set via ENVIRONMENT variables
-COPY startserver ${MAILARCHIVA_INSTALL_DIR}/server/startserver
-COPY profile.sh ${MAILARCHIVA_INSTALL_DIR}/server/profiler/profile.sh
+    mkdir -m 777 /tmp/wal 
+
+# update java options to redirect WAL
+RUN cp ${MAILARCHIVA_INSTALL_DIR}/server/startserver ${MAILARCHIVA_INSTALL_DIR}/server/startserver.old && \
+    opt_java_opts_old='export JAVA_OPTS="' && \
+    opt_java_opts_new='export JAVA_OPTS="-Dstorage.wal.path=/temp/wal ' && \
+    escaped_opt_java_opts_old=$(printf '%s\n' "${opt_java_opts_old}" | sed 's:[][\/.^$*]:\\&:g') && \
+    escaped_opt_java_opts_new=$(printf '%s\n' "${opt_java_opts_new}" | sed 's:[][\/.^$*]:\\&:g') && \
+    sed -i "s/$escaped_opt_java_opts_old/$escaped_opt_java_opts_new/" /opt/mailarchiva/server/startserver 
 
 RUN  chmod +x ${MAILARCHIVA_INSTALL_DIR}/server/startserver && \
     # setup runit to run mailarchiva on startup
